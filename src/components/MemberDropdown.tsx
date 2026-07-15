@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import type { Member } from '../data/groups'
+import {
+  getTargetLabels,
+  type SelectableItem,
+} from '../data/selectable'
+import type { TargetType } from '../types'
 
 interface MemberDropdownProps {
-  members: Member[]
+  items: SelectableItem[]
+  target: TargetType
   selected: string[]
   mode: 'single' | 'multi'
   onChange: (selected: string[]) => void
@@ -11,7 +16,8 @@ interface MemberDropdownProps {
 }
 
 export function MemberDropdown({
-  members,
+  items,
+  target,
   selected,
   mode,
   onChange,
@@ -20,6 +26,7 @@ export function MemberDropdown({
 }: MemberDropdownProps) {
   const [search, setSearch] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const labels = getTargetLabels(target)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -42,27 +49,28 @@ export function MemberDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [onClose])
 
-  const filtered = members.filter((m) =>
-    m.name.toLowerCase().includes(search.toLowerCase()),
+  const filtered = items.filter((item) =>
+    item.name.toLowerCase().includes(search.toLowerCase()),
   )
 
-  const toggleMember = (name: string) => {
+  const toggleItem = (id: string) => {
     if (mode === 'single') {
-      onChange(selected.includes(name) ? [] : [name])
+      onChange(selected.includes(id) ? [] : [id])
       onClose()
+      return
+    }
+
+    if (selected.includes(id)) {
+      onChange(selected.filter((s) => s !== id))
     } else {
-      if (selected.includes(name)) {
-        onChange(selected.filter((s) => s !== name))
-      } else {
-        onChange([...selected, name])
-      }
+      onChange([...selected, id])
     }
   }
 
   const style: CSSProperties = anchorRect
     ? {
         position: 'fixed',
-        top: Math.min(anchorRect.bottom + 4, window.innerHeight - 320),
+        top: Math.min(anchorRect.bottom + 4, window.innerHeight - 360),
         left: Math.min(anchorRect.left, window.innerWidth - 280),
         width: Math.max(anchorRect.width, 260),
       }
@@ -74,30 +82,32 @@ export function MemberDropdown({
         <input
           type="text"
           className="member-dropdown-search"
-          placeholder="搜索成员..."
+          placeholder={labels.search}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <ul className="member-dropdown-list">
-          {filtered.map((member) => (
-            <li key={member.name}>
+          {filtered.map((item) => (
+            <li key={item.id}>
               <button
                 type="button"
                 className={`member-dropdown-item${
-                  selected.includes(member.name) ? ' selected' : ''
+                  selected.includes(item.id) ? ' selected' : ''
                 }`}
-                onClick={() => toggleMember(member.name)}
+                onClick={() => toggleItem(item.id)}
               >
-                <img src={member.image} alt={member.name} />
-                <span>{member.name}</span>
-                {mode === 'multi' && selected.includes(member.name) && (
+                <img src={item.image} alt={item.name} />
+                <span className="member-dropdown-label">
+                  <span>{item.name}</span>
+                </span>
+                {mode === 'multi' && selected.includes(item.id) && (
                   <span className="member-dropdown-check">✓</span>
                 )}
               </button>
             </li>
           ))}
           {filtered.length === 0 && (
-            <li className="member-dropdown-empty">未找到成员</li>
+            <li className="member-dropdown-empty">{labels.empty}</li>
           )}
         </ul>
         {mode === 'multi' && (

@@ -1,21 +1,32 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Group } from '../../data/groups'
-import { getMemberByName } from '../../data/groups'
+import {
+  getItemById,
+  getTargetLabels,
+  type SelectableGroup,
+} from '../../data/selectable'
+import type { TargetType } from '../../types'
 import { computeThumbSize } from '../../utils/thumbLayout'
 import { MemberDropdown } from '../MemberDropdown'
 import { MemberImage } from '../MemberImage'
 
 interface MultiOshiRowProps {
-  group: Group
+  group: SelectableGroup
+  target: TargetType
   selected: string[]
   onChange: (selected: string[]) => void
 }
 
-export function MultiOshiRow({ group, selected, onChange }: MultiOshiRowProps) {
+export function MultiOshiRow({
+  group,
+  target,
+  selected,
+  onChange,
+}: MultiOshiRowProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [thumbSize, setThumbSize] = useState({ width: 36, height: 48 })
   const membersRef = useRef<HTMLDivElement>(null)
   const rowRef = useRef<HTMLButtonElement>(null)
+  const labels = getTargetLabels(target)
 
   useEffect(() => {
     const el = membersRef.current
@@ -56,16 +67,16 @@ export function MultiOshiRow({ group, selected, onChange }: MultiOshiRowProps) {
         </div>
         <div className="multi-oshi-members" ref={membersRef}>
           {selected.length === 0 ? (
-            <span className="multi-oshi-placeholder">请选择成员</span>
+            <span className="multi-oshi-placeholder">{labels.placeholder}</span>
           ) : (
-            selected.map((name) => {
-              const member = getMemberByName(group.id, name)
-              if (!member) return null
+            selected.map((id) => {
+              const item = getItemById(id)
+              if (!item) return null
               return (
                 <MemberImage
-                  key={name}
-                  src={member.image}
-                  alt={name}
+                  key={id}
+                  src={item.image}
+                  alt={item.name}
                   width={thumbSize.width}
                   height={thumbSize.height}
                 />
@@ -76,7 +87,8 @@ export function MultiOshiRow({ group, selected, onChange }: MultiOshiRowProps) {
       </button>
       {dropdownOpen && (
         <MemberDropdown
-          members={group.members}
+          items={group.items}
+          target={target}
           selected={selected}
           mode="multi"
           onChange={onChange}

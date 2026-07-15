@@ -1,28 +1,35 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import type { Group } from '../data/groups'
-import { getMemberByName } from '../data/groups'
+import {
+  getItemById,
+  type SelectableGroup,
+} from '../data/selectable'
+import type { TargetType } from '../types'
 import { fitMemberAspectBox, type ThumbSize } from '../utils/thumbLayout'
 import { MemberDropdown } from './MemberDropdown'
 import { MemberImage } from './MemberImage'
 
 interface BandCardProps {
-  group: Group
+  group: SelectableGroup
+  target: TargetType
   selected: string[]
   onChange: (selected: string[]) => void
 }
 
-export function BandCard({ group, selected, onChange }: BandCardProps) {
+export function BandCard({
+  group,
+  target,
+  selected,
+  onChange,
+}: BandCardProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [memberSize, setMemberSize] = useState<ThumbSize>({ width: 0, height: 0 })
   const cardRef = useRef<HTMLButtonElement>(null)
   const memberRef = useRef<HTMLDivElement>(null)
-  const selectedMember = selected[0]
-  const member = selectedMember
-    ? getMemberByName(group.id, selectedMember)
-    : undefined
+  const selectedId = selected[0]
+  const item = selectedId ? getItemById(selectedId) : undefined
 
   useLayoutEffect(() => {
-    if (!member) {
+    if (!item) {
       setMemberSize({ width: 0, height: 0 })
       return
     }
@@ -46,21 +53,24 @@ export function BandCard({ group, selected, onChange }: BandCardProps) {
           : 0)
       const width = card.clientWidth - paddingX
       const height = card.clientHeight - paddingY - logoBlock
+      const next = fitMemberAspectBox(width, height)
 
-      setMemberSize(fitMemberAspectBox(width, height))
+      setMemberSize((prev) =>
+        prev.width === next.width && prev.height === next.height ? prev : next,
+      )
     }
 
     update()
     const observer = new ResizeObserver(update)
     observer.observe(card)
     return () => observer.disconnect()
-  }, [member, selectedMember])
+  }, [item, selectedId])
 
   return (
     <>
       <button
         type="button"
-        className={`band-card${member ? ' band-card--selected' : ''}`}
+        className={`band-card${item ? ' band-card--selected' : ''}`}
         ref={cardRef}
         onClick={() => setDropdownOpen(true)}
       >
@@ -75,12 +85,12 @@ export function BandCard({ group, selected, onChange }: BandCardProps) {
           />
           <span className="band-card-logo-fallback">{group.name}</span>
         </div>
-        {member && (
+        {item && (
           <div className="band-card-member" ref={memberRef}>
             {memberSize.width > 0 && memberSize.height > 0 ? (
               <MemberImage
-                src={member.image}
-                alt={member.name}
+                src={item.image}
+                alt={item.name}
                 width={memberSize.width}
                 height={memberSize.height}
               />
@@ -90,7 +100,8 @@ export function BandCard({ group, selected, onChange }: BandCardProps) {
       </button>
       {dropdownOpen && (
         <MemberDropdown
-          members={group.members}
+          items={group.items}
+          target={target}
           selected={selected}
           mode="single"
           onChange={onChange}

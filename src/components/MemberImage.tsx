@@ -13,9 +13,13 @@ export function MemberImage({
   width,
   height,
 }: MemberImageProps) {
+  const isVoiceActor = src.includes('/voice-actors/')
+
   return (
     <div
-      className={`member-image-wrap ${className ?? ''}`}
+      className={`member-image-wrap${isVoiceActor ? ' member-image-wrap--no-zoom' : ''}${
+        className ? ` ${className}` : ''
+      }`}
       style={
         width && height
           ? { width: `${width}px`, height: `${height}px` }
